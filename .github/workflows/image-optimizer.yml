@@ -1,57 +1,62 @@
-# https://github.com/marketplace/actions/image-optimizer-action
-name: Compress Images
+name: Optimize Images
 on:
   workflow_dispatch:
-  schedule: [{cron: "0 0 * * 0"}]
-  pull_request:
-    paths:
-      - '**/*.{svg,png,jpg,jpeg,gif,webp,avif}'
   push:
     paths:
-      - '**/*.{svg,png,jpg,jpeg,gif,webp,avif}'
-
+      - '**/*.{jpg,jpeg,png,webp,avif,gif,svg}'
+  pull_request:
+    paths:
+      - '**/*.{jpg,jpeg,png,webp,avif,gif,svg}'
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+permissions:
+  contents: write
 jobs:
-  build:
-    name: stellasoftio/image-optimizer-action
-    permissions: write-all
+  optimize-images:
     runs-on: ubuntu-latest
     steps:
-      # Checkout repo
-      - name: Checkout Repo
+      - name: Checkout Repository
         uses: actions/checkout@v5
-
-      # Cache Image Optimizer dependencies
-      - name: Cache Image Optimizer dependencies
-        id: cache-image-optimizer
-        uses: actions/cache@v4
         with:
-          path: ~/.cache/stellar-image-optimizer
-          key: ${{ runner.os }}-image-optimizer-${{ hashFiles('**/lockfiles') }}
-          restore-keys: |
-            ${{ runner.os }}-image-optimizer-
+          ref: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref }}
 
-      # Compress images
-      - name: Compress Images
-        id: compress-images
-        uses: stellasoftio/image-optimizer-action@v1
+      - name: Compress and Convert Images
+        id: compress
+        uses: stellasoftio/image-optimizer-action@v1.2.0
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          export-webp: true
-          export-avif: true
+          export-webp: false
+          export-avif: false
           compress-png: true
           compress-svg: true
           compress-jpg: true
           compress-webp: true
           compress-avif: true
-          replace-original-after-export-webp: true
+          replace-original-after-export-webp: false
 
-      # Create pull request if any images were compressed
-      - name: Create New Pull Request If Needed
-        if: steps.compress-images.outputs.markdown_report != ''
-        uses: peter-evans/create-pull-request@v7
+      - name: Remove Originals After Conversion
+        if: steps.compress.outputs.changes_detected == 'true'
+        run: |
+          set -e
+          LC_ALL=C find -O3 . -type f -name '*.avif' -print0 | while IFS= read -r -d '' avif_file; do
+            base_path="${avif_file%.avif}"
+            for ext in png jpg jpeg; do
+              original="${base_path}.${ext}"
+              [[ -f "$original" ]] && echo "Replacing static image with AVIF: $original" && rm "$original"
+            done
+          done
+          LC_ALL=C find -O3 . -type f -name '*.webp' -print0 | while IFS= read -r -d '' webp_file; do
+            base_path="${webp_file%.webp}"
+            original_gif="${base_path}.gif"
+            [[ -f "$original_gif" ]] && echo "Replacing animated GIF with WebP: $original_gif" && rm "$original_gif"
+          done
+
+      - name: Commit Changes
+        if: steps.compress.outputs.changes_detected == 'true' && github.event.pull_request.head.repo.full_name == github.repository
+        uses: stefanzweifel/git-auto-commit-action@v7
         with:
-          title: Compressed Images
-          branch-suffix: timestamp
-          commit-message: Compressed Images
-          body: ${{ steps.compress-images.outputs.markdown_report }}
-      
+          commit_message: 'chore(images): Convert static to AVIF, animated to WebP'
+          branch: ${{ github.head_ref || github.ref_name }}
+          commit_user_name: 'github-actions[bot]'
+          commit_user_email: '41898282+github-actions[bot]@users.noreply.github.com'
