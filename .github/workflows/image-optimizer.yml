@@ -20,6 +20,7 @@ jobs:
         uses: actions/checkout@v5
         with:
           ref: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref }}
+          fetch-depth: 0
 
       - name: Compress and Convert Images
         id: compress
