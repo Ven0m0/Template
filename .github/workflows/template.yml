@@ -1,0 +1,36 @@
+name: Template
+on:
+  workflow_dispatch:
+  #schedule: [{cron: "0 0 * * 0"}]
+  
+concurrency:
+  group: ${{github.workflow}}-${{github.head_ref || github.run_id}}
+  cancel-in-progress: true
+permissions: write-all
+env:
+  DEBIAN_FRONTEND: noninteractive
+  LC_ALL: C
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:
+  run:
+    name: Template
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v5
+        with:
+          token: ${{ secrets.PAT || secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+          ref: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref }}
+
+
+
+      - name: Commit Changes
+        if: steps.compress.outputs.changes_detected == 'true' && github.event.pull_request.head.repo.full_name == github.repository
+        uses: stefanzweifel/git-auto-commit-action@v7
+        with:
+          commit_message: 'chore(images): Convert static to AVIF, animated to WebP'
+          branch: ${{ github.head_ref || github.ref_name }}
+          commit_user_name: 'github-actions[bot]'
+          commit_user_email: '41898282+github-actions[bot]@users.noreply.github.com'
