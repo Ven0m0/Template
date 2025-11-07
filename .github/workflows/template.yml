@@ -17,12 +17,6 @@ jobs:
     name: Template
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v5
-        with:
-          token: ${{ secrets.PAT || secrets.GITHUB_TOKEN }}
-          fetch-depth: 0
-          ref: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref }}
       - name: Free Disk space
         run: |
           df -h; sudo apt-get autoclean -y; sudo apt-get autoremove --purge -y
@@ -37,6 +31,13 @@ jobs:
             sudo sed '/mime/d' -i $DPKG_TRIGGERS;  sudo sed '/hicolor-icon-theme/d' -i $DPKG_TRIGGERS
           fi
           echo -e "\nFree space:"; df -h
+      - name: Checkout Code
+        uses: actions/checkout@v5
+        with:
+          token: ${{ secrets.PAT || secrets.GITHUB_TOKEN }}
+          fetch-depth: 1
+          ref: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref }}
+
       - name: Commit Changes
         if: steps.compress.outputs.changes_detected == 'true' && github.event.pull_request.head.repo.full_name == github.repository
         uses: stefanzweifel/git-auto-commit-action@v7
