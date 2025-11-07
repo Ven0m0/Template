@@ -5,12 +5,14 @@ on:
     paths:
       - "**/*.{sh,bash,bashrc,profile}"
 
-permissions:
-  contents: write
-  pull-requests: write
 concurrency:
-  group: "${{ github.workflow }}-${{ github.ref }}"
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
+permissions: write-all
+env:
+  DEBIAN_FRONTEND: noninteractive
+  LC_ALL: C
+  GITHUB_TOKEN: ${{ secrets.PAT || secrets.GITHUB_TOKEN }}
 jobs:
   lint:
     runs-on: ubuntu-latest
