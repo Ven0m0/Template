@@ -1,61 +1,74 @@
-# https://megalinter.io
 ---
 name: MegaLinter
-
 on:
-  workflow_dispatch:
-  pull_request:
-    paths:
-      - "**/*.{sh,bash,bashrc,profile}"
-      - "**/*.{md,markdown}"
-      - "**/*.{yml,yaml,toml,json,ini,conf}"
-      - "**/*.{js,jsx,css,html}"
-      - "Makefile"
-      - ".{editorconfig,env,mega-linter.yml}"
   push:
-    paths:
-      - "**/*.{sh,bash,bashrc,profile}"
-      - "**/*.{md,markdown}"
-      - "**/*.{yml,yaml,toml,json,ini,conf}"
-      - "**/*.{js,jsx,css,html}"
-      - "Makefile"
-      - ".{editorconfig,env,mega-linter.yml}"
-      - ".github/**"
+    branches: [main, master, claude/**]
+    paths: ['**.yml', '**.yaml', '**.toml', '**.json', '**.json5', '**.jsonc', '**.properties', '.github/workflows/mega-linter.yml']
+  pull_request:
+    branches: [main, master, claude/**]
+  workflow_dispatch:
 concurrency:
   group: ${{ github.ref }}-${{ github.workflow }}
   cancel-in-progress: true
-permissions:
-  contents: write
-  pull-requests: write
-
 jobs:
   megalinter:
     name: MegaLinter
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
     steps:
-      - name: Checkout Code
+      - name: Checkout
         uses: actions/checkout@v5
         with:
-          token: ${{ secrets.PAT || secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
-
       - name: MegaLinter
-        uses: oxsecurity/megalinter@v9
+        id: ml
+        uses: oxsecurity/megalinter@v7
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          MEGALINTER_CONFIG: .mega-linter.yml
-          VALIDATE_ALL_CODEBASE: true
           APPLY_FIXES: all
           APPLY_FIXES_EVENT: all
           APPLY_FIXES_MODE: commit
-          PARALLEL: true
-          SHOW_ELAPSED_TIME: true
-
-      - name: Upload MegaLinter reports
-        if: always()
-        uses: actions/upload-artifact@v5
+          ENABLE_LINTERS: YAML_YAMLLINT,YAML_PRETTIER,JSON_JSONLINT,JSON_PRETTIER,JSON_NPM_PACKAGE_JSON_LINT,TOML_TAPLO
+          YAML_YAMLLINT_CONFIG_FILE: .yamllint.yml
+          YAML_PRETTIER_CONFIG_FILE: .prettierrc.yml
+          JSON_PRETTIER_CONFIG_FILE: .prettierrc.yml
+          FILEIO_REPORTER: false
+          GITHUB_TOKEN: ${{ secrets.PAT || secrets.GITHUB_TOKEN }}
+      - name: Archive reports
+        if: success() || failure()
+        uses: actions/upload-artifact@v4
         with:
-          name: MegaLinter-reports
+          name: MegaLinter reports
           path: |
             megalinter-reports
-            mega-linter-*
+            mega-linter.log
+      - name: Create PR with fixes
+        id: cpr
+        if: >
+          steps.ml.outputs.has_updated_sources == 1 &&
+          (env.APPLY_FIXES_EVENT == 'all' || env.APPLY_FIXES_EVENT == github.event_name) &&
+          env.APPLY_FIXES_MODE == 'pull_request' &&
+          (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository)
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "[MegaLinter] Apply linter fixes"
+          title: "[MegaLinter] Apply linter fixes"
+          labels: bot
+          branch: megalinter-fixes
+          delete-branch: true
+      - name: Comment on PR
+        if: >
+          steps.ml.outputs.has_updated_sources == 1 &&
+          (env.APPLY_FIXES_EVENT == 'all' || env.APPLY_FIXES_EVENT == github.event_name) &&
+          env.APPLY_FIXES_MODE == 'pull_request' &&
+          (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository)
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          issue-number: ${{ github.event.pull_request.number }}
+          body: |
+            MegaLinter found fixes. Review PR #${{ steps.cpr.outputs.pull-request-number }}
