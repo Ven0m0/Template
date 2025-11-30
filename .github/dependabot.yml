@@ -8,15 +8,22 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-  - package-ecosystem: "docker"
-    directory: "/"
-    schedule:
-      interval: "weekly"
   - package-ecosystem: "pip"
     directory: "/"
     schedule:
       interval: "weekly"
+    ignore:
+      - dependency-name: "pip"
   - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    versioning-strategy: "increase"
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "devcontainers"
     directory: "/"
     schedule:
       interval: "weekly"
@@ -24,4 +31,3 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-      
