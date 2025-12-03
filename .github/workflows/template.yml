@@ -2,11 +2,18 @@ name: Template
 on:
   workflow_dispatch:
   #schedule: [{cron: "0 0 * * 0"}]
-  
+  #push:
+    #branches: [main, master]
+  #pull_request:
+    #branches: [main, master]
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref || github.run_id }}
   cancel-in-progress: true
-permissions: write-all
+permissions:
+  contents: write
+  pull-requests: write
+  checks: write
+  packages: read
 env:
   DEBIAN_FRONTEND: noninteractive
   LC_ALL: C
@@ -18,6 +25,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Free Disk space
+        id: Debloat
         run: |
           df -h; sudo apt-get autoclean -y; sudo apt-get autoremove --purge -y
           command -v docker &>/dev/null && docker system prune -a -f
@@ -31,11 +39,12 @@ jobs:
             sudo sed '/mime/d' -i $DPKG_TRIGGERS;  sudo sed '/hicolor-icon-theme/d' -i $DPKG_TRIGGERS
           fi
           echo -e "\nFree space:"; df -h
+        continue-on-error: true
       - name: Checkout Code
         uses: actions/checkout@v6
         with:
           token: ${{ secrets.PAT || secrets.GITHUB_TOKEN }}
-          fetch-depth: 1
+          fetch-depth: 0
           ref: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref }}
 
       - name: Commit Changes
