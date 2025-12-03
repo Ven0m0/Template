@@ -1,68 +1,37 @@
----
-extends: default
-locale: en_US.UTF-8
-# Ignore globs and files
-ignore: |
-  node_modules/
-  .git/
-  megalinter-reports/
-  package-lock.json
-  yarn.lock
-
-ignore-from-file: [.gitignore, .yamlignore]
-yaml-files:
-  - "*.yaml"
-  - "*.yml"
-  - ".yamllint"
-
-rules:
-  anchors: enable
-  # Allow longer lines, warn if >120
-  line-length:
-    max: 120
-    level: warning
-  colons: enable
-  commas: enable
-  comments-indentation: disable
-  comments:
-    min-spaces-from-content: 1
-    level: warning
-  braces:
-    min-spaces-inside: 0
-    max-spaces-inside: 1
-    level: warning
-  brackets:
-    min-spaces-inside: 0
-    max-spaces-inside: 1
-    level: warning
-  document-start: disable
-  document-end: disable
-  empty-lines:
-    level: warning
-    max: 1
-    max-start: 0
-    max-end: 0
-  empty-values:
-    forbid-in-block-mappings: false
-    forbid-in-flow-mappings: false
-  hyphens: enable
-  indentation:
-    spaces: 2
-    indent-sequences: true
-    level: warning
-  key-duplicates: enable
-  key-ordering: disable
-  new-line-at-end-of-file: enable
-  new-lines:
-    type: unix
-  octal-values: disable
-  quoted-strings:
-    quote-type: any
-    required: false
-    level: warning
-  trailing-spaces: enable
-  truthy:
-    allowed-values: ["true", "false", "yes", "no", "on", "off"]
-    check-keys: false
-    level: warning
-  float-values: disable
+continue_on_error: true
+doublestar: true
+exclude:
+  - ./.cache
+  - ./go
+  - ./node_modules
+  - ./vendor
+  - ./.git
+extensions:
+  - yaml
+  - yml
+gitignore_excludes: true
+gitignore_path: .gitignore
+include: []
+line_ending: lf
+match_type: standard
+output_format: default
+regex_exclude: []
+formatter:
+  array_indent: 0
+  disable_alias_key_correction: true
+  disallow_anchors: false
+  drop_merge_tag: false
+  eof_newline: true
+  force_array_style: ""
+  include_document_start: false
+  indent: 2
+  indent_root_array: false
+  indentless_arrays: false
+  max_line_length: 120
+  pad_line_comments: 1
+  retain_line_breaks: false
+  retain_line_breaks_single: false
+  scan_folded_as_literal: false
+  strip_directives: false
+  trim_trailing_whitespace: true
+  type: basic
