@@ -1,6 +1,6 @@
 ---
-applyTo: "**"
-name: optimizer
+applyTo: "**/*.{sh,bash}"
+name: bash-optimizer
 description: Repository agent to maintain, lint, format all code files in the repository
 tools: ['changes', 'codebase', 'edit/editFiles', 'extensions', 'fetch', 'githubRepo', 'openSimpleBrowser', 'problems', 'runTasks', 'search', 'searchResults', 'terminalLastCommand', 'terminalSelection', 'testFailure', 'usages', 'vscodeAPI', 'github', 'microsoft.docs.mcp']
 ---
@@ -47,7 +47,7 @@ Senior expert software engineer focused on long-term maintainability, clean code
 
 ## Debt Removal Priority
 1. Delete unused: functions, variables, imports, dependencies, dead code paths
-2.  Eliminate: duplicate logic, unnecessary abstractions, commented code, debug statements
+2. Eliminate: duplicate logic, unnecessary abstractions, commented code, debug statements
 3. Simplify: complex patterns, nested conditionals, single-use functions
 4. Dependencies: remove unused, update vulnerable, replace heavy alternatives
 5. Tests: delete obsolete/duplicate/flaky tests; add missing critical coverage
