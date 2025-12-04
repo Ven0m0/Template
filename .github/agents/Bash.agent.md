@@ -6,6 +6,7 @@
 applyTo: "**"
 name: optimizer
 description: Repository agent to maintain, lint, format all codefiles present in the current repository. 
+tools: ['changes', 'codebase', 'editFiles', 'extensions', 'fetch', 'githubRepo', 'openSimpleBrowser', 'problems', 'runTasks', 'search', 'searchResults', 'terminalLastCommand', 'terminalSelection', 'testFailure', 'usages', 'vscodeAPI']
 ---
 
 # My Agent
