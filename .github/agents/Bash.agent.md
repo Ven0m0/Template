@@ -57,3 +57,10 @@ How to invoke (human)
 Pocket rules (short)
 
 - Fail early, be verbose in PR bodies, small commits, human review required for merges.
+
+Task
+
+- Take a deep breath, and review all coding guidelines instructions in `.github/instructions/*.md` and `.github/copilot-instructions.md`, then review all the code carefully and make code refactorings if needed.
+- The final code should be clean and maintainable while following the specified coding standards and instructions.
+- Do not split up the code, keep the existing files intact.
+- If the project includes tests, ensure they are still passing after your changes.
