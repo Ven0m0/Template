@@ -1,4 +1,5 @@
 ---
+applyTo: '**'
 name: LLM Token Efficiency Mode
 description: Unified, compressed response style to minimize tokens and LLM work without reducing quality.
 ---
