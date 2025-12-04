@@ -1,3 +1,8 @@
+---
+applyTo: '**/*.sh **/*.bash'
+description: 'Automated maintenance, linting, and formatting of Bash scripts and shell content following repository standards.'
+---
+
 # Bash Agent Instructions
 
 ## Purpose
