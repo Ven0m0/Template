@@ -1,4 +1,5 @@
 name: Copilot Enhanced Context
+
 on:
   workflow_dispatch:
   push:
@@ -28,35 +29,49 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
         with:
           fetch-depth: 50
           lfs: false
 
+      - name: Ensure .copilot directory
+        run: mkdir -p .copilot
+
+      # -----------------------------------------------------------------------
+      # Runtime / tooling setup
+      # -----------------------------------------------------------------------
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
 
       - name: Cache Bun
+        if: hashFiles('bun.lockb') != ''
         uses: actions/cache@v4
         with:
           path: ~/.bun/install/cache
           key: ${{ runner.os }}-bun-${{ hashFiles('bun.lockb') }}
           restore-keys: ${{ runner.os }}-bun-
 
-      - name: Install deps
+      - name: Install dependencies (if JS project)
+        if: hashFiles('package.json', 'bun.lockb') != ''
         run: bun install --frozen-lockfile --no-progress
         env:
           NODE_ENV: production
 
-      - name: Install tools
+      - name: Install helper tools
         run: |
-          bun add -g prettier eslint typescript
-          curl -fsSL https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -o /usr/local/bin/yq
-          chmod +x /usr/local/bin/yq
+          set -euo pipefail
+          # yq (YAML/JSON processor)
+          if ! command -v yq >/dev/null 2>&1; then
+            curl -fsSL \
+              https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 \
+              -o /usr/local/bin/yq
+            chmod +x /usr/local/bin/yq
+          fi
 
       - name: Setup uv
         uses: astral-sh/setup-uv@v7
@@ -65,98 +80,171 @@ jobs:
 
       - name: Install linters
         run: |
+          set -euo pipefail
           uv tool install yamllint
           uv tool install shellcheck-py
 
+      # -----------------------------------------------------------------------
+      # Analysis steps
+      # -----------------------------------------------------------------------
       - name: Analyze repository structure
         run: |
+          set -euo pipefail
           {
             echo "# Repository Map"
             echo "Generated: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
             echo
             echo "## Directory Structure"
             echo '```'
-            tree -L 3 -I 'node_modules|.git|dist|build|coverage' --dirsfirst || find . -type d -not -path '*/.*' -not -path '*/node_modules/*' | head -50
+            if command -v tree >/dev/null 2>&1; then
+              tree -L 3 -I 'node_modules|.git|dist|build|coverage' --dirsfirst
+            else
+              find . -maxdepth 3 -type d \
+                -not -path '*/.git*' \
+                -not -path '*/node_modules*' \
+                -not -path '*/dist*' \
+                -not -path '*/build*' | head -50
+            fi
             echo '```'
             echo
             echo "## File Counts"
-            echo "- Shell scripts: $(find . -name '*.sh' -type f | wc -l)"
-            echo "- YAML configs: $(find . -name '*.yml' -o -name '*.yaml' -type f | wc -l)"
-            echo "- Markdown docs: $(find . -name '*.md' -type f | wc -l)"
-            echo "- JavaScript/TS: $(find . -name '*.js' -o -name '*.ts' -o -name '*.jsx' -o -name '*.tsx' -type f | wc -l)"
+            echo "- Shell scripts: $(find . -name '*.sh' -type f | wc -l || echo 0)"
+            echo "- YAML configs: $(find . -type f \( -name '*.yml' -o -name '*.yaml' \) | wc -l || echo 0)"
+            echo "- Markdown docs: $(find . -name '*.md' -type f | wc -l || echo 0)"
+            echo "- JavaScript/TS: $(find . -type f \( -name '*.js' -o -name '*.ts' -o -name '*.jsx' -o -name '*.tsx' \) | wc -l || echo 0)"
             echo
           } > .copilot/repo-structure.md
 
       - name: Extract shell patterns
         if: hashFiles('**/*.sh') != ''
         run: |
+          set -euo pipefail
           {
             echo "# Shell Function Index"
             echo
-            mapfile -t scripts < <(find . -name '*.sh' -type f)
+            mapfile -t scripts < <(find . -name '*.sh' -type f | sort)
             for script in "${scripts[@]}"; do
-              echo "## ${script#./}"
-              grep -E '^[a-zA-Z_][a-zA-Z0-9_]*\(\)' "$script" | sed 's/().*//' | sed 's/^/- /' || true
+              rel="${script#./}"
+              echo "## ${rel}"
+              # Function definitions (simple pattern)
+              grep -E '^[a-zA-Z_][a-zA-Z0-9_]*\(\)' "$script" 2>/dev/null \
+                | sed 's/().*//' \
+                | sed 's/^/- /' || true
             done
             echo
             echo "## Common Patterns Detected"
-            grep -rh 'set -[euo]*' --include='*.sh' . | sort -u | sed 's/^/- /'
+            grep -rh --include='*.sh' 'set -[euo]*' . 2>/dev/null \
+              | sort -u \
+              | sed 's/^/- /' || echo "None"
             echo
             echo "## Tools Used"
-            grep -roh '\b(fd|fdfind|rg|sd|jaq|jq|choose|sk|fzf|aria2|curl|wget)\b' --include='*.sh' . | sort -u | sed 's/^/- /'
-          } > .copilot/shell-patterns.md 2>/dev/null || echo "No shell scripts analyzed"
+            grep -roh --include='*.sh' \
+              -E '\b(fd|fdfind|rg|sd|jaq|jq|choose|sk|fzf|aria2|curl|wget)\b' . 2>/dev/null \
+              | sort -u \
+              | sed 's/^/- /' || echo "None"
+          } > .copilot/shell-patterns.md
 
       - name: Map dependencies
         if: hashFiles('package.json', 'bun.lockb') != ''
         run: |
+          set -euo pipefail
           {
             echo "# Dependency Graph"
             echo
             echo "## Production Dependencies"
-            bun pm ls --depth=0 2>/dev/null | grep -v '├─\|└─' || jq -r '.dependencies | keys[]' package.json 2>/dev/null | sed 's/^/- /'
+            if bun pm ls --depth=0 >/dev/null 2>&1; then
+              bun pm ls --depth=0 \
+                | grep -vE '^(├─|└─)' \
+                || echo "None detected"
+            elif command -v jq >/dev/null 2>&1; then
+              jq -r '.dependencies // {} | keys[]' package.json 2>/dev/null \
+                | sed 's/^/- /' || echo "None"
+            else
+              echo "jq not available; skipping detailed dependency list"
+            fi
             echo
             echo "## Dev Dependencies"
-            jq -r '.devDependencies | keys[]' package.json 2>/dev/null | sed 's/^/- /' || echo "None"
+            if command -v jq >/dev/null 2>&1; then
+              jq -r '.devDependencies // {} | keys[]' package.json 2>/dev/null \
+                | sed 's/^/- /' || echo "None"
+            else
+              echo "jq not available; skipping"
+            fi
             echo
             echo "## Scripts Available"
-            jq -r '.scripts | to_entries[] | "- `\(.key)`: \(.value)"' package.json 2>/dev/null || echo "None"
+            if command -v jq >/dev/null 2>&1; then
+              jq -r '.scripts // {} | to_entries[] | "- `\(.key)`: \(.value)"' package.json 2>/dev/null \
+                || echo "None"
+            else
+              echo "jq not available; skipping"
+            fi
           } > .copilot/dependencies.md
 
       - name: Extract TODOs and FIXMEs
         run: |
+          set -euo pipefail
           {
             echo "# Action Items"
             echo
             echo "## TODO"
-            grep -rn 'TODO\|@todo' --include='*.sh' --include='*.js' --include='*.ts' --include='*.md' . 2>/dev/null | sed 's/:/ | Line /' | head -20 || echo "None found"
+            grep -rnE 'TODO|@todo' \
+              --include='*.sh' \
+              --include='*.js' \
+              --include='*.ts' \
+              --include='*.md' . 2>/dev/null \
+              | sed 's/:/ | Line /' \
+              | head -20 || echo "None found"
             echo
             echo "## FIXME"
-            grep -rn 'FIXME\|@fixme' --include='*.sh' --include='*.js' --include='*.ts' --include='*.md' . 2>/dev/null | sed 's/:/ | Line /' | head -20 || echo "None found"
+            grep -rnE 'FIXME|@fixme' \
+              --include='*.sh' \
+              --include='*.js' \
+              --include='*.ts' \
+              --include='*.md' . 2>/dev/null \
+              | sed 's/:/ | Line /' \
+              | head -20 || echo "None found"
             echo
             echo "## HACK"
-            grep -rn 'HACK\|@hack' --include='*.sh' --include='*.js' --include='*.ts' . 2>/dev/null | sed 's/:/ | Line /' | head -10 || echo "None found"
+            grep -rnE 'HACK|@hack' \
+              --include='*.sh' \
+              --include='*.js' \
+              --include='*.ts' . 2>/dev/null \
+              | sed 's/:/ | Line /' \
+              | head -10 || echo "None found"
           } > .copilot/action-items.md
 
       - name: Analyze recent changes
         run: |
+          set -euo pipefail
           {
             echo "# Recent Activity"
             echo
             echo "## Last 10 Commits"
-            git log --oneline -10 --no-decorate
+            git log --oneline -10 --no-decorate || echo "No history"
             echo
             echo "## Recently Modified Files"
             git diff --name-status HEAD~10..HEAD 2>/dev/null | head -20 || echo "Insufficient history"
             echo
             echo "## Hot Files (most commits)"
-            git log --name-only --pretty=format: HEAD~50..HEAD 2>/dev/null | sort | uniq -c | sort -rn | head -10 | awk '{print "- " $2 " (" $1 " changes)"}'
+            git log --name-only --pretty=format: HEAD~50..HEAD 2>/dev/null \
+              | sed '/^$/d' \
+              | sort \
+              | uniq -c \
+              | sort -rn \
+              | head -10 \
+              | awk '{print "- " $2 " (" $1 " changes)"}' || echo "No data"
             echo
             echo "## Contributors (last 50 commits)"
-            git log --format='%an' -50 | sort | uniq -c | sort -rn | awk '{print "- " $2 " (" $1 " commits)"}'
+            git log --format='%an' -50 2>/dev/null \
+              | sort \
+              | uniq -c \
+              | sort -rn \
+              | awk '{print "- " $2 " (" $1 " commits)"}' || echo "No data"
           } > .copilot/recent-activity.md
 
       - name: Create quick reference
         run: |
+          set -euo pipefail
           {
             echo "# Quick Reference"
             echo
@@ -194,7 +282,7 @@ jobs:
             echo "#!/usr/bin/env bash"
             echo "set -euo pipefail"
             echo "shopt -s nullglob globstar"
-            echo 'IFS=$'"'"'\n\t'"'"
+            echo "IFS=\$'\\n\\t'"
             echo "export LC_ALL=C LANG=C"
             echo '```'
             echo
@@ -214,14 +302,18 @@ jobs:
             echo '```'
           } > .copilot/quick-reference.md
 
+      # -----------------------------------------------------------------------
+      # Master context + publishing
+      # -----------------------------------------------------------------------
       - name: Generate master context
         run: |
-          mkdir -p .copilot
+          set -euo pipefail
           {
             echo "# Repository Context for GitHub Copilot"
             echo "Last updated: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
             echo "Branch: ${{ github.ref_name }}"
             echo
+
             cat .copilot/repo-structure.md 2>/dev/null || true
             echo
             cat .copilot/dependencies.md 2>/dev/null || true
@@ -247,10 +339,10 @@ jobs:
         run: |
           echo "Context size: $(wc -c < copilot-context.md) bytes"
           echo "Lines: $(wc -l < copilot-context.md)"
-          head -50 copilot-context.md
+          head -50 copilot-context.md || true
 
       - name: Upload full context
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         with:
           name: copilot-enhanced-context
           path: |
@@ -261,6 +353,7 @@ jobs:
       - name: Commit context to repo
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
+          set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add copilot-context.md .copilot/*.md 2>/dev/null || true
