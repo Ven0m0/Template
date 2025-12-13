@@ -7,9 +7,9 @@ Analyze code vs lang-spec standards (PEP8, ES6+, etc) for qual/maint.
 ## Rules
 
 1. **ID**: Lang/Framework.
-1. **Apply**: Offl guides/idioms.
-1. **Context**: Respect exist patterns.
-1. **Output**: Actionable > Nitpicks.
+2. **Apply**: Offl guides/idioms.
+3. **Context**: Respect exist patterns.
+4. **Output**: Actionable > Nitpicks.
 
 ## Checks
 
@@ -23,10 +23,9 @@ Analyze code vs lang-spec standards (PEP8, ES6+, etc) for qual/maint.
 
 ```markdown
 ## Review
-**Sum**: Stack: []; Score: X/10; Key Improv: []
-**Good**: [Prac 1, 2]
-**Improv**:
+
+**Sum**: Stack: []; Score: X/10; Key Improv: [] **Good**: [Prac 1, 2] **Improv**:
+
 1. **High**: [Name] (Curr -> Rec -> Why)
-2. **Med**: ...
-**Quick Wins**: [List]
+2. **Med**: ... **Quick Wins**: [List]
 ```
