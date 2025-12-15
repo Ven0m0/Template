@@ -25,7 +25,7 @@ jobs:
           echo "shellcheck_version=$version" >> $GITHUB_OUTPUT
       - name: Cache ShellCheck
         id: cache-shellcheck
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.cache/shellcheck
           key: ${{ runner.os }}-shellcheck-${{ steps.shellcheck-version.outputs.shellcheck_version }}
@@ -59,7 +59,7 @@ jobs:
           echo "super_linter_version=$version" >> $GITHUB_OUTPUT
       - name: Cache Super-Linter
         id: cache-super-linter
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.cache/super-linter
           key: ${{ runner.os }}-super-linter-${{ steps.sl-version.outputs.super_linter_version }}
