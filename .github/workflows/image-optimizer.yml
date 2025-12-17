@@ -19,7 +19,7 @@ jobs:
       # Cache Image Optimizer dependencies
       - name: Cache Image Optimizer dependencies
         id: cache-image-optimizer
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.cache/stellar-image-optimizer
           key: ${{ runner.os }}-image-optimizer-${{ hashFiles('**/lockfiles') }}
