@@ -1,6 +1,4 @@
----
 name: Submodule Update
-
 on:
   workflow_dispatch:
   schedule:
@@ -30,12 +28,10 @@ jobs:
           key: ${{ runner.os }}-git-submodules-${{ hashFiles('.gitmodules') }}
           restore-keys: |
             ${{ runner.os }}-git-submodules-
-
       - name: Update Submodules
         id: update
         shell: bash
         run: |
-          set -euo pipefail
           git submodule sync --recursive -q
           git submodule update --recursive --remote --merge --depth 1 --single-branch -q
           # If any submodule SHA changed, it shows as modified in porcelain output
@@ -44,7 +40,6 @@ jobs:
           else
             echo "updated=false" >> "$GITHUB_OUTPUT"
           fi
-
       - name: Create PR with submodule updates
         if: steps.update.outputs.updated == 'true'
         uses: peter-evans/create-pull-request@v8
