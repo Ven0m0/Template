@@ -16,6 +16,9 @@
 *.ps1 text eol=crlf
 *.ahk text eol=crlf
 
+# Ensure the Gradle wrapper uses LF endings so CI can execute it
+gradlew text eol=lf
+
 ###############################################################################
 # Programming languages
 ###############################################################################
