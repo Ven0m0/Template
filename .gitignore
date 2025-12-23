@@ -97,7 +97,7 @@ apikeys.txt
 !.ssh/config
 
 #######################
-# Logs / runtime
+# Logs
 #######################
 *.log
 *.log.*
@@ -116,7 +116,7 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 false.*
 
 #######################
-# OS / Desktop cruft
+# OS
 #######################
 .directory
 .Trash-*
@@ -168,8 +168,17 @@ hs_err_pid*
 out/
 .gradle/
 .gradle-cache/
-build/
+.gradletasknamecache
 target/
+**/build/
+!src/**/build/
+# Ignore Gradle GUI config
+gradle-app.setting
+# Crashlytics plugin (for Android Studio and IntelliJ)
+com_crashlytics_export_strings.xml
+crashlytics.properties
+crashlytics-build.properties
+fabric.properties
 
 #######################
 # .NET / C# / F#
@@ -184,6 +193,7 @@ obj/
 #######################
 # C/C++ / Rust / Go / compiled
 #######################
+*.apk
 *.o
 *.obj
 *.so
@@ -212,6 +222,9 @@ go/
 dist/
 result
 result-*
+
+# CMake
+cmake-build-*/
 
 #######################
 # PHP / Composer
