@@ -21,7 +21,7 @@ jobs:
       - name: Get ShellCheck version
         id: shellcheck-version
         run: |
-          version=$(reviewdog/action-shellcheck@v1.32.0 --version 2>&1 | head -n1 | awk '{print $2}')
+          version="1.32.0"
           echo "shellcheck_version=$version" >> $GITHUB_OUTPUT
       - name: Cache ShellCheck
         id: cache-shellcheck
@@ -55,7 +55,7 @@ jobs:
       - name: Get Super-Linter version
         id: sl-version
         run: |
-          version=$(echo "v8.1.0" | sed 's/^v//') 
+          version="8.3.1"
           echo "super_linter_version=$version" >> $GITHUB_OUTPUT
       - name: Cache Super-Linter
         id: cache-super-linter
