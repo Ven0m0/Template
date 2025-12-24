@@ -41,7 +41,7 @@ jobs:
       - name: Locate release artifact
         id: artifact
         run: |
-          APK_PATH="$(ls -t app/build/outputs/apk/release/*.apk 2>/dev/null | head -n 1)"
+          APK_PATH="$(find app/build/outputs/apk/release -name '*.apk' -type f -printf '%T@ %p\n' 2>/dev/null | sort -rn | head -n 1 | cut -d' ' -f2-)"
           if [ -z "$APK_PATH" ]; then
             echo "Unable to find release APK in app/build/outputs/apk/release"
             exit 1
