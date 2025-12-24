@@ -29,7 +29,7 @@ permissions:
 jobs:
   lint-and-fix:
     name: Validate and Fix Configs
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     steps:
       - name: Checkout Code
         uses: actions/checkout@v6
