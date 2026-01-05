@@ -40,7 +40,7 @@ jobs:
     runs-on: ${{ matrix.platform.runs-on }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v6.0.1
         with:
           depth: 1
       - name: Build binary
@@ -51,7 +51,7 @@ jobs:
           args: "--locked -r"
           strip: true
       - name: Publish artifacts and release
-        uses: houseabsolute/actions-rust-release@v0
+        uses: houseabsolute/actions-rust-release@v1
         with:
           executable-name: ubi
           target: ${{ matrix.platform.target }}
