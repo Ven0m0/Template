@@ -140,7 +140,7 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ## Related
 
-- [Claude Code](https://github.com/anthropics/claude-code)
+- [Claude](https://www.anthropic.com/claude)
 - [GitHub Copilot](https://github.com/features/copilot)
 - [Super-Linter](https://github.com/super-linter/super-linter)
 - [MegaLinter](https://megalinter.io/)
