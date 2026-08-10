@@ -14,7 +14,7 @@ jobs:
     steps:
       # Checkout repository
       - name: Checkout repository
-        uses: actions/checkout@v7.0.0
+        uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0
       # --- Dynamic ShellCheck cache ---
@@ -34,7 +34,7 @@ jobs:
 
       # Run ShellCheck via Reviewdog
       - name: Run ShellCheck via Reviewdog
-        uses: reviewdog/action-shellcheck@v1.32.0
+        uses: reviewdog/action-shellcheck@v1.32.1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           reporter: github-pr-review
